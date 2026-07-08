@@ -1,0 +1,17 @@
+# Chỉ dùng cho LOCAL DEV. Production dùng Neon (xem docs/06-deployment.md),
+# không deploy container Postgres này lên Render/production.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: freetune
+      POSTGRES_PASSWORD: freetune
+      POSTGRES_DB: freetune_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - freetune_pgdata:/var/lib/postgresql/data
+
+volumes:
+  freetune_pgdata:
