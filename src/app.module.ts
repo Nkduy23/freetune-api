@@ -1,15 +1,18 @@
-// Import toàn bộ modules
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
-import { ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import configuration from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
 import { HealthModule } from "./modules/health/health.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { TracksModule } from "./modules/tracks/tracks.module";
+import { StationsModule } from "./modules/stations/stations.module";
+import { IngestionModule } from "./modules/ingestion/ingestion.module";
+import { CsrfOriginMiddleware } from "./common/middleware/csrf-origin.middleware";
 
-// Modules sẽ thêm dần theo Phase 1 → Phase 3:
-// AuthModule, UsersModule, TracksModule, StationsModule, FavoritesModule,
-// PlaylistsModule, IngestionModule — import vào đây khi code xong từng cái.
+// Modules còn lại cho Phase 3: FavoritesModule, PlaylistsModule.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -19,12 +22,26 @@ import { HealthModule } from "./modules/health/health.module";
     ThrottlerModule.forRoot([
       {
         ttl: 60_000,
-        limit: 100, // giới hạn chung; auth module sẽ có limit riêng chặt hơn
+        limit: 100, // giới hạn chung; auth module override chặt hơn qua @Throttle() riêng
       },
     ]),
-    ScheduleModule.forRoot(), // cần sẵn cho @Cron ở IngestionModule sau này
+    ScheduleModule.forRoot(), // cần sẵn cho @Cron ở IngestionModule
     PrismaModule,
     HealthModule,
+    AuthModule,
+    TracksModule,
+    StationsModule,
+    IngestionModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard, // bật rate limit thật sự cho toàn app (ThrottlerModule chỉ khai báo cấu hình)
+    },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CsrfOriginMiddleware).forRoutes("*");
+  }
+}

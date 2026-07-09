@@ -1,4 +1,3 @@
-// Đọc & validate biến môi trường
 export interface AppConfig {
   port: number;
   corsOrigin: string;

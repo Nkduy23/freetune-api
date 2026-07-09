@@ -1,4 +1,3 @@
-// Bọc response theo envelope { data, meta }
 import {
   CallHandler,
   ExecutionContext,

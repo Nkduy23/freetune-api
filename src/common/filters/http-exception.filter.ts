@@ -1,4 +1,3 @@
-// Chuẩn hoá response lỗi theo docs/04-api-contract.md
 import {
   ArgumentsHost,
   Catch,

@@ -1,4 +1,3 @@
-// Validate DTO bằng Zod schema
 import { BadRequestException, PipeTransform } from "@nestjs/common";
 import { ZodSchema } from "zod";
 

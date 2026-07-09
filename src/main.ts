@@ -1,4 +1,3 @@
-// Bootstrap Nest app, cookie-parser, CORS, global pipes/filters
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
