@@ -10,9 +10,10 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { TracksModule } from "./modules/tracks/tracks.module";
 import { StationsModule } from "./modules/stations/stations.module";
 import { IngestionModule } from "./modules/ingestion/ingestion.module";
+import { FavoritesModule } from "./modules/favorites/favorites.module";
+import { PlaylistsModule } from "./modules/playlists/playlists.module";
 import { CsrfOriginMiddleware } from "./common/middleware/csrf-origin.middleware";
 
-// Modules còn lại cho Phase 3: FavoritesModule, PlaylistsModule.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -32,6 +33,8 @@ import { CsrfOriginMiddleware } from "./common/middleware/csrf-origin.middleware
     TracksModule,
     StationsModule,
     IngestionModule,
+    FavoritesModule,
+    PlaylistsModule,
   ],
   providers: [
     {

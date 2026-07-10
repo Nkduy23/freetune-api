@@ -32,39 +32,25 @@ docker compose down -v       # dừng + xoá luôn data — dùng khi muốn mig
 
 > **Production**: đổi `DATABASE_URL` trong biến môi trường Render sang connection string Neon (xem `docs/06-deployment.md`). Không cần Docker khi deploy — Render chỉ chạy code Node, DB nằm ở Neon.
 
-## Trạng thái hiện tại (Phase 2)
+## Trạng thái hiện tại (Phase 3 — done, sẵn sàng qua FE)
 
-- [x] Bootstrap NestJS + cấu trúc thư mục theo Clean-BE convention.
-- [x] Prisma schema đầy đủ — **lưu ý: enum `SourceProvider` đã đổi, chỉ còn `JAMENDO`** (bỏ `PIXABAY`, xem `docs/02-data-sources-licensing.md`). Nếu đã migrate trước đó, chạy lại:
-  ```bash
-  pnpm prisma:migrate:dev -- --name remove_pixabay_provider
-  ```
-- [x] Global exception filter, response interceptor, Zod validation pipe.
-- [x] Health check endpoint.
-- [x] Module `auth` đầy đủ (register/login/refresh rotation/logout/logout-all/me).
-- [x] Module `tracks`: list (filter genre/mood/commercialOnly/pagination), detail, genres, moods, trending.
-- [x] Module `stations`: danh sách station tĩnh + queue tự sinh (loại trừ track đã nghe, shuffle).
-- [x] Module `ingestion`: gọi Jamendo API thật, tính `commercialSafe` từ license, cron 12h/lần + endpoint trigger thủ công.
-- [ ] Module `favorites`/`playlists` — sang Phase 3.
+- [x] `auth` đầy đủ (register/login/refresh rotation/logout/logout-all/me).
+- [x] `tracks`, `stations`, `ingestion` (Jamendo thật).
+- [x] `favorites`: `GET/POST/DELETE /me/favorites/:trackId` — idempotent (thích/bỏ thích lặp lại không lỗi).
+- [x] `playlists`: `GET/POST /me/playlists`, `GET/PATCH/DELETE /playlists/:id`, `POST/DELETE /playlists/:id/tracks(/:trackId)` — check ownership, playlist private trả `PLAYLIST_NOT_FOUND` cho người lạ (không lộ là có tồn tại).
+- [x] `OptionalAccessTokenGuard` mới (common/guards) — cho phép xem playlist public không cần đăng nhập, có đăng nhập thì biết là ai để check quyền.
 
-## Cách test Phase 2 (thứ tự nên làm)
+## Test nhanh Phase 3 (Postman, đã đăng nhập từ trước)
 
-1. Điền `.env`: `JAMENDO_CLIENT_ID` (đăng ký free tại https://devportal.jamendo.com/), `INTERNAL_SYNC_SECRET` (chuỗi tuỳ ý).
-2. Chạy `pnpm start:dev`.
-3. Trigger đồng bộ nhạc lần đầu (để có dữ liệu thật trước khi test tracks/stations):
-   ```
-   POST /api/internal/sync/jamendo
-   Header: X-Internal-Secret: <giá trị INTERNAL_SYNC_SECRET trong .env>
-   ```
-   Response trả về `{ tracksFetched, tracksNew, errors }`. Chạy xong kiểm tra `IngestionLog` trong DB (qua DBeaver) nếu muốn chắc chắn.
-4. `GET /api/tracks` — danh sách track vừa đồng bộ. Thử thêm query `?mood=lofi&commercialOnly=true`.
-5. `GET /api/tracks/genres`, `GET /api/tracks/moods`, `GET /api/tracks/trending`.
-6. `GET /api/stations` — danh sách 4 station tĩnh kèm `trackCount`.
-7. `GET /api/stations/deep-focus/queue?limit=10` — batch track ngẫu nhiên cho station đó. Gọi lại với `?excludeIds=<id1>,<id2>` để test không bị lặp lại track đã nghe.
+1. `POST /api/me/favorites/<trackId>` → thích 1 bài (lấy trackId từ `GET /api/tracks`).
+2. `GET /api/me/favorites` → thấy bài vừa thích.
+3. `POST /api/me/playlists` — body `{ "name": "Làm việc buổi sáng" }`.
+4. `POST /api/playlists/<playlistId>/tracks` — body `{ "trackId": "<trackId>" }`.
+5. `GET /api/playlists/<playlistId>` — không cần cookie vẫn xem được NẾU tạo với `isPublic: true`; nếu `isPublic: false` (mặc định) mà gọi không cookie hoặc cookie của user khác → `PLAYLIST_NOT_FOUND`.
 
 ## Ghi chú kiểm thử type (môi trường sandbox của Claude)
 
-Lúc code phần này, mạng sandbox của Claude chặn tải engine binary của Prisma (`binaries.prisma.sh`), nên `prisma generate` ở đây chỉ tạo được client rút gọn — 2 dòng cảnh báo TypeScript về `Prisma.TrackWhereInput` là do thiếu client đầy đủ ở sandbox, **không phải lỗi code**. Máy bạn có internet đầy đủ nên `pnpm prisma:generate` sẽ tạo type đúng và hết cảnh báo.
+Mạng sandbox chặn tải engine binary của Prisma nên `prisma generate` ở đây chỉ ra client rút gọn — vài dòng cảnh báo TypeScript về `Prisma.TrackWhereInput`/`Prisma.PrismaClientKnownRequestError` là do thiếu client đầy đủ ở sandbox, **không phải lỗi code**. Máy bạn có internet đầy đủ nên `pnpm prisma generate` sẽ hết cảnh báo.
 
 ## Auth — cách test nhanh (Postman/Thunder Client)
 
