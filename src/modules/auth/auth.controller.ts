@@ -1,4 +1,3 @@
-// register/login/refresh/logout/logout-all/me
 import {
   Body,
   Controller,
@@ -10,7 +9,6 @@ import {
   Res,
   UnauthorizedException,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
@@ -48,9 +46,8 @@ export class AuthController {
 
   @Post("register")
   @Throttle(AUTH_THROTTLE)
-  @UsePipes(new ZodValidationPipe(registerSchema))
   async register(
-    @Body() dto: RegisterDto,
+    @Body(new ZodValidationPipe(registerSchema)) dto: RegisterDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -65,9 +62,8 @@ export class AuthController {
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @Throttle(AUTH_THROTTLE)
-  @UsePipes(new ZodValidationPipe(loginSchema))
   async login(
-    @Body() dto: LoginDto,
+    @Body(new ZodValidationPipe(loginSchema)) dto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
