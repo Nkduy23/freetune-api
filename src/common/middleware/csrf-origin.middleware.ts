@@ -1,4 +1,3 @@
-// Check Origin/Referer + header X-Client cho POST/PATCH/DELETE
 import { ForbiddenException, Injectable, NestMiddleware } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { NextFunction, Request, Response } from "express";
@@ -23,7 +22,10 @@ export class CsrfOriginMiddleware implements NestMiddleware {
 
     // Endpoint internal (cron trigger sync nhạc) tự bảo vệ bằng INTERNAL_SYNC_SECRET riêng,
     // không phải request từ trình duyệt nên không áp check Origin ở đây.
-    if (req.path.startsWith("/api/internal/")) {
+    // LƯU Ý: dùng req.originalUrl chứ KHÔNG dùng req.path — app.setGlobalPrefix('api') khiến
+    // req.path bị cắt mất phần "/api" khi tới middleware (chỉ còn phần path tương đối sau prefix),
+    // trong khi req.originalUrl vẫn giữ nguyên URL đầy đủ client gọi vào.
+    if (req.originalUrl.startsWith("/api/internal/")) {
       return next();
     }
 
