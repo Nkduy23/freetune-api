@@ -1,4 +1,3 @@
-// Upsert Track theo (sourceProvider, sourceId), tạo IngestionLog
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import type { NormalizedIngestedTrack } from "./providers/jamendo.provider";
@@ -7,21 +6,20 @@ import type { NormalizedIngestedTrack } from "./providers/jamendo.provider";
 export class IngestionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Upsert theo (sourceProvider, sourceId) — tránh trùng lặp khi cron chạy lại nhiều lần.
-  // Trả về true nếu đây là track MỚI (trước đó chưa tồn tại), dùng để ghi thống kê vào IngestionLog.
-  async upsertTrackAndReportNew(
-    track: NormalizedIngestedTrack,
-  ): Promise<boolean> {
-    const existing = await this.prisma.track.findUnique({
-      where: {
-        sourceProvider_sourceId: {
-          sourceProvider: "JAMENDO",
-          sourceId: track.sourceId,
-        },
-      },
-      select: { id: true },
+  // Gộp check tồn tại của CẢ BATCH thành 1 query duy nhất (thay vì tự query từng track
+  // trong loop — đúng nguyên tắc tránh N+1 của Clean-BE). Gọi 1 lần trước khi upsert từng track.
+  async findExistingSourceIds(sourceIds: string[]): Promise<Set<string>> {
+    if (sourceIds.length === 0) return new Set();
+    const rows = await this.prisma.track.findMany({
+      where: { sourceProvider: "JAMENDO", sourceId: { in: sourceIds } },
+      select: { sourceId: true },
     });
+    return new Set(rows.map((r: { sourceId: string }) => r.sourceId));
+  }
 
+  // Upsert theo (sourceProvider, sourceId) — tránh trùng lặp khi cron chạy lại nhiều lần.
+  // Việc track này MỚI hay không đã xác định trước đó qua findExistingSourceIds, không tự query lại ở đây.
+  async upsertTrack(track: NormalizedIngestedTrack): Promise<void> {
     const data = {
       title: track.title,
       artist: track.artist,
@@ -54,8 +52,6 @@ export class IngestionRepository {
         syncedAt: new Date(),
       },
     });
-
-    return !existing;
   }
 
   createLog(data: {

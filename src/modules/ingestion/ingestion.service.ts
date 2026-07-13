@@ -1,4 +1,3 @@
-// Điều phối gọi provider + upsert Track + ghi IngestionLog
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { IngestionRepository } from "./ingestion.repository";
@@ -65,10 +64,16 @@ export class IngestionService {
           tag,
           TRACKS_PER_TAG,
         );
+
+        // Check tồn tại 1 LẦN cho cả batch (thay vì query riêng từng track trong loop bên dưới).
+        const existingIds = await this.repo.findExistingSourceIds(
+          tracks.map((t) => t.sourceId),
+        );
+
         for (const track of tracks) {
-          const isNew = await this.repo.upsertTrackAndReportNew(track);
+          await this.repo.upsertTrack(track);
           tracksFetched += 1;
-          if (isNew) tracksNew += 1;
+          if (!existingIds.has(track.sourceId)) tracksNew += 1;
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
